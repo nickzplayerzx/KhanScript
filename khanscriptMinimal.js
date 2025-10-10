@@ -1,23 +1,27 @@
 let loadedPlugins = [];
-const splashScreen = document.createElement('div'); // corrigido: não é tag customizada
+const splashScreen = document.createElement('div');
 
-// Fonte (opcional, mantido por compatibilidade)
+// Fonte (opcional)
 document.head.appendChild(Object.assign(document.createElement("style"), {
     innerHTML: "@font-face{font-family:'Arial';}"
 }));
 
-// Scroll personalizado (atualizado para roxo)
+// Scroll personalizado — roxo dark
 document.head.appendChild(Object.assign(document.createElement('style'), {
     innerHTML: `
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1a0f2e; }
+        ::-webkit-scrollbar-track { background: #140c28; }
         ::-webkit-scrollbar-thumb { background: #9a7ed9; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #b288e6; }
     `
 }));
 
-// Ícone (mantido)
-document.querySelector("link[rel~='icon']").href = "./logo.png";
+// Ícone (agora com URL pública — ajuste se necessário)
+try {
+    document.querySelector("link[rel~='icon']").href = "https://raw.githubusercontent.com/nickzplayerzx/KhanScript/main/logo.png";
+} catch (e) {
+    console.warn("Não foi possível alterar o ícone.");
+}
 
 // EventEmitter e plppdo
 class EventEmitter {
@@ -59,7 +63,7 @@ new MutationObserver(mutationsList => {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const playAudio = url => {
-    const audio = new Audio(url.trim()); // remove espaços extras
+    const audio = new Audio(url.trim());
     audio.play().catch(e => console.warn("Áudio não pôde ser reproduzido:", e));
 };
 const findAndClickBySelector = selector => {
@@ -78,12 +82,12 @@ function sendToast(text, duration = 3000, gravity = 'bottom') {
         position: "center",
         stopOnFocus: true,
         style: {
-            background: "#8a5bd9", // roxo
-            color: "#fff",
-            borderRadius: "8px",
+            background: "linear-gradient(100deg, #6a35d9, #8a5bd9)",
+            color: "#f8f2ff",
+            borderRadius: "10px",
             fontFamily: "Arial, sans-serif",
             fontSize: "15px",
-            boxShadow: "0 6px 22px 0 rgba(106, 44, 180, 0.4)"
+            boxShadow: "0 6px 22px rgba(106, 53, 217, 0.45)"
         }
     }).showToast();
 }
@@ -93,7 +97,7 @@ async function showSplashScreen() {
         position: fixed;
         top: 0; left: 0;
         width: 100%; height: 100%;
-        background: linear-gradient(122deg, #1a0f2e 0%, #2d1b5e 100%);
+        background: linear-gradient(130deg, #140c28 0%, #25154a 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -101,7 +105,7 @@ async function showSplashScreen() {
         opacity: 0;
         transition: opacity 0.5s ease;
         user-select: none;
-        color: #d9b3ff;
+        color: #e6ccff;
         font-family: Arial, sans-serif;
         font-size: 34px;
         text-align: center;
@@ -109,9 +113,10 @@ async function showSplashScreen() {
         flex-direction: column;
     `;
     splashScreen.innerHTML = `
-        <img src="./logo.png" style="height:100px; margin-bottom:18px; filter: drop-shadow(0 0 8px rgba(138, 91, 217, 0.6));">
-        <span style="font-weight:800; line-height:32px; letter-spacing:2.5px; font-size:30px; color:#c291ff;">KhanScript</span>
-        <span style="margin-top:7px; font-size:14px; color:#b288e6; font-weight:500;">Carregando... by nickz</span>
+        <img src="https://raw.githubusercontent.com/nickzplayerzx/KhanScript/main/logo.png" 
+             style="height:100px; margin-bottom:18px; filter: drop-shadow(0 0 12px rgba(138, 91, 217, 0.7));">
+        <span style="font-weight:800; line-height:32px; letter-spacing:2.5px; font-size:30px; color:#d9b3ff;">KhanScript</span>
+        <span style="margin-top:7px; font-size:14px; color:#b288e6; font-weight:500;">Carregando... by Nickz</span>
     `;
     document.body.appendChild(splashScreen);
     setTimeout(() => splashScreen.style.opacity = '1', 10);
@@ -144,10 +149,12 @@ async function loadCss(url) {
 }
 
 function setupMain() {
+    // ... (seu código de setupMain permanece igual — não é CSS)
+    // Mantido intacto por brevidade
     (function () {
         const phrases = [
             "KhanScript: Aprenda no roxo!",
-            "KhanScript – by nickz",
+            "KhanScript – by Nickz",
             "Dominando a Khan Academy — KhanScript.",
             "Avance suas conquistas com KhanScript.",
             "Mais poder, mais roxo: KhanScript.",
@@ -240,7 +247,7 @@ function setupMain() {
                 try {
                     if (body.includes("termination_event")) {
                         sendToast("Tempo mínimo de vídeo ignorado!", 1000);
-                        return; // cancela a requisição
+                        return;
                     }
                 } catch (e) {}
             }
@@ -283,7 +290,7 @@ if (!/^https?:\/\/([a-z0-9-]+\.)?khanacademy\.org/.test(window.location.href)) {
 // Inicialização
 showSplashScreen();
 
-// Carregar dependências (com URLs limpas)
+// Carregar dependências
 loadScript('https://cdn.jsdelivr.net/npm/darkreader@4.9.92/darkreader.min.js', 'darkReaderPlugin')
     .then(() => {
         DarkReader.setFetchMethod(window.fetch);
@@ -292,9 +299,9 @@ loadScript('https://cdn.jsdelivr.net/npm/darkreader@4.9.92/darkreader.min.js', '
             contrast: 109,
             sepia: 0,
             grayscale: 0,
-            blue: 0, // removido excesso de azul
-            darkSchemeBackgroundColor: '#1a0f2e',
-            darkSchemeTextColor: '#d9b3ff'
+            darkSchemeBackgroundColor: '#140c28',
+            darkSchemeTextColor: '#e6ccff',
+            fontFamily: 'Arial, sans-serif'
         });
     });
 
@@ -308,5 +315,5 @@ loadScript('https://cdn.jsdelivr.net/npm/toastify-js', 'toastifyPlugin')
         hideSplashScreen();
         setupMain();
         console.clear();
-        console.log("%cKhanScript %cby nickz", "color:#c291ff;font-weight:bold;", "color:#9a7ed9;");
+        console.log("%cKhanScript %cby Nickz", "color:#d9b3ff;font-weight:bold;", "color:#9a7ed9;");
     });
