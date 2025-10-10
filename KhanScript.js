@@ -1,9 +1,9 @@
 const ver = "V1.0";
 let isDev = false;
 
-const logoUrl = "https://raw.githubusercontent.com/OnePrism0/KhanTool/main/logo.png";
+const logoUrl = "https://github.com/nickzplayerzx/KhanScript/blob/main/logo.png";
 const repoPathDefault = `https://raw.githubusercontent.com/OnePrism0/KhanTool/${isDev ? "dev" : "main"}/`;
-const repoPathRefHeads = `https://raw.githubusercontent.com/OnePrism0/KhanTool/refs/heads/${isDev ? "dev/" : "main/"}`;
+const repoPathRefHeads = `https://raw.githubusercontent.com/nickzplayerzx/KhanScript/refs/heads/${isDev ? "dev" : "main"}/`;
 
 let device = {
     mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone|Mobile|Tablet|Kindle|Silk|PlayBook|BB10/i.test(navigator.userAgent),
@@ -232,3 +232,4 @@ function setupMain() {
         document.body.appendChild(script);
     }
 })();
+
