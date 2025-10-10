@@ -1,6 +1,6 @@
 if (!device.mobile) {
     const script = Object.assign(document.createElement('script'), {
-        src: 'https://cdn.jsdelivr.net/npm/@widgetbot/crate@3', // espaço removido
+        src: 'https://cdn.jsdelivr.net/npm/@widgetbot/crate@3', // ✅ espaço removido
         async: true,
         onload: () => {
             const discEmbed = new Crate({
@@ -11,9 +11,10 @@ if (!device.mobile) {
                 indicator: true,
                 allChannelNotifications: true,
                 defer: false,
-                color: '#9a7ed9' // roxo suave combinando com o tema KhanScript
+                color: '#9a7ed9' // ✅ roxo suave do tema KhanScript
             });
 
+            // Mostra apenas na página de perfil da Khan Academy
             plppdo.on('domChanged', () => {
                 if (window.location.href.includes("khanacademy.org/profile")) {
                     discEmbed.show();
