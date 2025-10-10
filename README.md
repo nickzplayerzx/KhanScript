@@ -1,5 +1,5 @@
-# 🔹 KhanTool
-### O cheat mais avançado para a Khan Academy.
+# ☄️ KhanScript
+### O melhor cheat para Khan Academy!
 
 🙂 Bookmarklet:
 ```js
