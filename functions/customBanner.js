@@ -1,9 +1,9 @@
 const phrases = [ 
     "Sem nota? Sem chance.",
-    "KhanTool no topo.",
-    "KhanTool mandou um salve!",
-    "Queria tanto ter o KhanTool.",
-    "Ganhe tempo, use KhanTool!",
+    "KhanScript no topo.",
+    "KhanScript mandou um salve!",
+    "Queria tanto ter o KhanScript.",
+    "Ganhe tempo, use KhanScript!",
     "KhanTool tá voando!"
 ];
 
