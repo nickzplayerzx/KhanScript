@@ -101,7 +101,7 @@ if (features.autoAnswer) {
                         isProcessing = true;
                         
                         if (typeof sendToast === 'function') {
-                            sendToast("🎉 Exercício concluído!", 2000);
+                            sendToast("🎉 Exercício concluído, Agradeça o Nickz!", 2000);
                         }
                         
                         if (typeof playAudio === 'function') {
@@ -168,7 +168,7 @@ if (features.autoAnswer) {
                     if (!toastCooldown) {
                         toastCooldown = true;
                         if (typeof sendToast === 'function') {
-                            sendToast("✅ Atividade finalizada!", 2000);
+                            sendToast("✅ Atividade finalizada com sucesso!", 2000);
                         }
                         setTimeout(() => { 
                             toastCooldown = false;
