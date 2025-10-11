@@ -31,15 +31,15 @@ window.fetch = async function (input, init) {
                         type: "radio", 
                         options: { 
                             choices: [ 
-                                { content: "Resposta correta.", correct: true }, 
-                                { content: "Resposta incorreta.", correct: false } 
+                                { content: "Respostα Corretα ✅.", correct: true }, 
+                                { content: "Respostα Incorretα ❌.", correct: false } 
                             ] 
                         } 
                     } 
                 };
 
                 responseObj.data.assessmentItem.item.itemData = JSON.stringify(itemData);
-                sendToast("🔓 Questão exploitada pelo KhanTool.", 1000);
+                sendToast("🔓 Questão exploitada pelo KhanScript", 1000);
 
                 return new Response(JSON.stringify(responseObj), { 
                     status: originalResponse.status, 
