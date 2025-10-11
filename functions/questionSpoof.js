@@ -24,7 +24,7 @@ window.fetch = async function (input, init) {
                     "zTable": false 
                 };
 
-                itemData.question.content = "🫐 KhanTool: https://discord.gg/tdy2jCWja2 [[☃ radio 1]]";
+                itemData.question.content = "☄️ KhanScript : Todos os direitos reservados a Washinley e Yudi[[☃ radio 1]]";
                 
                 itemData.question.widgets = { 
                     "radio 1": { 
