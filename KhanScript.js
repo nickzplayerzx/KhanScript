@@ -1,7 +1,7 @@
 const ver = "V1.0";
 let isDev = false;
 
-// ✅ URLs corrigidas: SEM espaços
+// URLs corrigidas (sem espaços, usando raw)
 const logoUrl = "https://raw.githubusercontent.com/nickzplayerzx/KhanScript/main/logo.png";
 const repoPathDefault = `https://raw.githubusercontent.com/nickzplayerzx/KhanScript/${isDev ? "dev" : "main"}/`;
 const repoPathRefHeads = `https://raw.githubusercontent.com/nickzplayerzx/KhanScript/refs/heads/${isDev ? "dev" : "main"}/`;
@@ -93,7 +93,7 @@ new MutationObserver((mutationsList) => {
 
 window.debug = function (text) { };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-const playAudio = url => { const audio = new Audio(url); audio.play().catch(()=>{}); };
+const playAudio = url => { const audio = new Audio(url.trim()); audio.play().catch(()=>{}); };
 const findAndClickBySelector = selector => {
     const element = document.querySelector(selector);
     if (element) {
@@ -228,7 +228,7 @@ function setupMain() {
 
     await showSplashScreen();
 
-    // Carrega dependências — ✅ URLs sem espaços
+    // Carrega dependências
     await loadScript('https://cdn.jsdelivr.net/npm/darkreader@4.9.92/darkreader.min.js', 'darkReaderPlugin');
     if (window.DarkReader) {
         DarkReader.setFetchMethod(window.fetch);
@@ -252,7 +252,7 @@ function setupMain() {
         }
     },1000);
 
-    // Busca perfil — ✅ URL e body sem espaços
+    // Busca perfil
     fetch("https://pt.khanacademy.org/api/internal/graphql/getFullUserProfile", {
         referrer: "https://pt.khanacademy.org/profile/me",
         body: '{"operationName":"getFullUserProfile","query":"query getFullUserProfile($kaid: String, $username: String) {\\n  user(kaid: $kaid, username: $username) {\\n    id\\n    nickname\\n    username\\n  }\\n}"}',
