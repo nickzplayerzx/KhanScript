@@ -1,6 +1,3 @@
-// KhanScript.js — versão estendida com fetch resiliente (timeout, retries, cache, fallback)
-// Editado para adicionar timeout, retry exponencial com jitter, cache em localStorage, e fallback jsDelivr.
-
 const ver = "V1.0";
 let isDev = false;
 
@@ -43,12 +40,7 @@ window.features = {
 window.featureConfigs = {
     autoAnswerDelay: 3,
     customUsername: "",
-    customPfp: "",
-    // Configurações do fetch resiliente:
-    githubToken: "",          // opcional: token pessoal do GitHub (coloque aqui ou em window.featureConfigs antes de injetar)
-    fetchTimeoutMs: 10000,    // timeout padrão (ms)
-    fetchRetries: 3,          // número de tentativas (retries)
-    fetchCacheTtlMs: 1000 * 60 * 60 // 1h cache padrão
+    customPfp: ""
 };
 
 // Segurança (opcional)
@@ -99,7 +91,7 @@ new MutationObserver((mutationsList) => {
             plppdo.emit('domChanged');
 }).observe(document.body, { childList: true, subtree: true });
 
-window.debug = function (text) { }; // stub
+window.debug = function (text) { };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const playAudio = url => { const audio = new Audio(url.trim()); audio.play().catch(()=>{}); };
 const findAndClickBySelector = selector => {
@@ -160,297 +152,52 @@ async function showSplashScreen() {
 
 async function hideSplashScreen() {
     splashScreen.style.opacity = '0';
-    setTimeout(() => {
-        if (splashScreen && splashScreen.parentElement) splashScreen.remove();
-    }, 800);
+    setTimeout(() => splashScreen.remove(), 800);
 }
 
-/*
-  FUNÇÕES RESILIENTES DE FETCH
-  - resilientFetch: faz fetch com timeout, retries exponencial com jitter, tratamento de 429, cache em localStorage e fallback para jsDelivr quando raw.githubusercontent falhar.
-  - loadScript: carrega script via tag quando for CDN, ou via fetch+eval quando for script raw.
-  - loadCss: carrega CSS via <link> ou injeta <style> se necessário.
-*/
-
-function parseRetryAfter(header) {
-    if (!header) return null;
-    // Retry-After pode ser segundos ou data HTTP
-    const seconds = parseInt(header, 10);
-    if (!isNaN(seconds)) return seconds * 1000;
-    const date = Date.parse(header);
-    if (!isNaN(date)) return date - Date.now();
-    return null;
-}
-
-function jsDelivrFallback(rawUrl) {
-    try {
-        if (!rawUrl.startsWith('https://raw.githubusercontent.com/')) return null;
-        const path = rawUrl.replace('https://raw.githubusercontent.com/', '');
-        const parts = path.split('/');
-        if (parts.length < 4) return null;
-        const owner = parts[0];
-        const repo = parts[1];
-        const branch = parts[2];
-        const rest = parts.slice(3).join('/');
-        return `https://cdn.jsdelivr.net/gh/${owner}/${repo}@${branch}/${rest}`;
-    } catch (e) {
-        return null;
-    }
-}
-
-async function resilientFetch(url, opts = {}) {
-    const timeoutMs = opts.timeoutMs || window.featureConfigs.fetchTimeoutMs || 10000;
-    const maxRetries = (typeof opts.retries === 'number') ? opts.retries : (window.featureConfigs.fetchRetries || 3);
-    const cacheTtl = (typeof opts.cacheTtlMs === 'number') ? opts.cacheTtlMs : (window.featureConfigs.fetchCacheTtlMs || (1000 * 60 * 60));
-    const forceNoCache = !!opts.noCache;
-    const method = (opts.method || 'GET').toUpperCase();
-
-    const cacheKey = `khanscript_cache_${method}_${url}`;
-    if (!forceNoCache && method === 'GET') {
-        try {
-            const raw = localStorage.getItem(cacheKey);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Date.now() - parsed._cachedAt < cacheTtl) {
-                    return new Response(parsed.content, { status: 200, headers: parsed.headers || {} });
-                } else {
-                    localStorage.removeItem(cacheKey);
-                }
-            }
-        } catch (e) { /* ignore cache errors */ }
-    }
-
-    let attempt = 0;
-    let lastError = null;
-    let tryUrl = url;
-
-    while (attempt <= maxRetries) {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeoutMs);
-
-        const headers = Object.assign({}, opts.headers || {});
-        if (window.featureConfigs && window.featureConfigs.githubToken) {
-            // se o token existir e URL for api.github.com ou raw.githubusercontent, adiciona header
-            try {
-                const token = window.featureConfigs.githubToken;
-                if (token && token.length) {
-                    headers['Authorization'] = `token ${token}`;
-                }
-            } catch (e) {}
-        }
-
-        try {
-            const response = await fetch(tryUrl, Object.assign({}, opts, { signal: controller.signal, headers }));
-            clearTimeout(id);
-
-            if (response.ok) {
-                // cache GET responses
-                if (!forceNoCache && method === 'GET') {
-                    try {
-                        const cloned = response.clone();
-                        const text = await cloned.text();
-                        const headersObj = {};
-                        response.headers.forEach((v, k) => headersObj[k] = v);
-                        localStorage.setItem(cacheKey, JSON.stringify({
-                            _cachedAt: Date.now(),
-                            content: text,
-                            headers: headersObj
-                        }));
-                        // Recreate a Response from cached text so caller can await response.text()
-                        return new Response(text, { status: response.status, headers: headersObj });
-                    } catch (e) {
-                        // se falhar cache, ainda retornamos response original
-                        return response;
-                    }
-                }
-                return response;
-            } else if (response.status === 429) {
-                // tratar Retry-After ou X-RateLimit-Reset
-                const ra = response.headers.get('Retry-After') || response.headers.get('retry-after');
-                const reset = response.headers.get('X-RateLimit-Reset') || response.headers.get('x-ratelimit-reset');
-                let waitMs = parseRetryAfter(ra);
-                if (!waitMs && reset) {
-                    const epoch = parseInt(reset, 10);
-                    if (!isNaN(epoch)) waitMs = Math.max(0, (epoch * 1000) - Date.now());
-                }
-                if (!waitMs) waitMs = Math.min(60000, 1000 * Math.pow(2, attempt)); // fallback
-                await delay(waitMs + Math.floor(Math.random() * 300));
-                lastError = new Error('429 Too Many Requests');
-            } else if (response.status >= 500 && response.status < 600) {
-                // erro de servidor, vamos retry com backoff
-                const backoff = Math.min(30000, 200 * Math.pow(2, attempt)) + Math.floor(Math.random() * 200);
-                await delay(backoff);
-                lastError = new Error(`HTTP ${response.status}`);
-            } else {
-                // outros erros (4xx) — não vamos continuar fazendo retries
-                const text = await response.text().catch(()=>null);
-                const err = new Error(`HTTP ${response.status}: ${text || response.statusText}`);
-                err.response = response;
-                throw err;
-            }
-        } catch (err) {
-            clearTimeout(id);
-            if (err.name === 'AbortError') {
-                // timeout, tenta novamente
-                const backoff = Math.min(30000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 300);
-                await delay(backoff);
-                lastError = new Error('Timeout');
-            } else {
-                // erro de rede — tenta novamente com backoff
-                const backoff = Math.min(30000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 300);
-                await delay(backoff);
-                lastError = err;
-            }
-        }
-
-        // tentativa de fallback para jsDelivr se URL for raw.githubusercontent e estamos no último retry
-        attempt++;
-        if (attempt > Math.max(1, Math.floor(maxRetries/2))) {
-            const fallback = jsDelivrFallback(url);
-            if (fallback && fallback !== tryUrl) {
-                tryUrl = fallback;
-            }
-        }
-    }
-
-    // se chegou aqui, todas as tentativas falharam
-    throw lastError || new Error('resilientFetch: falha desconhecida');
-}
-
-// Carrega script: tenta criar tag <script> para CDNs (mais confiável/prático), caso contrário fetch+eval
 async function loadScript(url, label) {
     const cleanUrl = url.trim();
-    // se for CDN conhecido, preferimos tag script (não bloqueante e cache do browser)
-    const preferTag = /cdn\.jsdelivr|cdnjs\.cloudflare|unpkg\.com|jsdelivr\.net|widgetbot/.test(cleanUrl);
-    try {
-        if (preferTag) {
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                let done = false;
-                const timeoutId = setTimeout(() => {
-                    if (done) return;
-                    done = true;
-                    s.remove();
-                    reject(new Error('loadScript timeout'));
-                }, (window.featureConfigs.fetchTimeoutMs || 10000) + 2000);
-
-                s.src = cleanUrl;
-                s.async = true;
-                s.onload = () => { if (done) return; done = true; clearTimeout(timeoutId); loadedPlugins.push(label); resolve(); };
-                s.onerror = async () => {
-                    if (done) return;
-                    done = true;
-                    clearTimeout(timeoutId);
-                    // fallback: tentar via resilientFetch e eval
-                    try {
-                        const resp = await resilientFetch(cleanUrl, { timeoutMs: window.featureConfigs.fetchTimeoutMs });
-                        const scriptText = await resp.text();
-                        try { eval(scriptText); loadedPlugins.push(label + ' (eval)'); resolve(); }
-                        catch (e) { reject(e); }
-                    } catch (e2) {
-                        reject(e2);
-                    }
-                };
-                document.head.appendChild(s);
-            });
-        } else {
-            // fetch + eval (usa cache automática do resilientFetch)
-            const resp = await resilientFetch(cleanUrl, { timeoutMs: window.featureConfigs.fetchTimeoutMs });
-            const script = await resp.text();
-            try {
-                eval(script);
-                loadedPlugins.push(label);
-            } catch (e) {
-                // talvez raw não funcione; tenta fallback para refs/heads ou jsDelivr
-                const alt = cleanUrl.includes('/main/') ? cleanUrl.replace('/main/', '/refs/heads/main/') : (cleanUrl.includes('/dev/') ? cleanUrl.replace('/dev/', '/refs/heads/dev/') : null);
-                if (alt) {
-                    try {
-                        const r = await resilientFetch(alt, { timeoutMs: window.featureConfigs.fetchTimeoutMs, noCache: true });
-                        const s2 = await r.text();
-                        eval(s2);
-                        loadedPlugins.push(label + ' (alt)');
-                        sendToast('Carregado via refs/heads', 2500, 'top');
-                        return;
-                    } catch (e2) {
-                        sendToast("Erro ao carregar: " + label, 5000, 'top');
-                    }
-                } else {
-                    sendToast("Erro: " + label, 5000, 'top');
+    return fetch(cleanUrl)
+        .then(r => {
+            if (!r.ok) throw new Error(cleanUrl);
+            return r.text();
+        })
+        .then(script => {
+            loadedPlugins.push(label);
+            eval(script);
+        })
+        .catch(async e => {
+            let altUrl = cleanUrl.includes('/main/') 
+                ? cleanUrl.replace('/main/', '/refs/heads/main/')
+                : cleanUrl.includes('/dev/')
+                ? cleanUrl.replace('/dev/', '/refs/heads/dev/')
+                : null;
+            if (altUrl) {
+                try {
+                    let altResp = await fetch(altUrl);
+                    if (!altResp.ok) throw new Error(altUrl);
+                    let script = await altResp.text();
+                    loadedPlugins.push(label + ' (alt)');
+                    eval(script);
+                    sendToast('Carregado via refs/heads', 2500, 'top');
+                    return;
+                } catch (err) {
+                    sendToast("Erro ao carregar: " + label, 5000, 'top');
                 }
+            } else {
+                sendToast("Erro: " + label, 5000, 'top');
             }
-        }
-    } catch (err) {
-        // tentativa final: fallback jsDelivr
-        const fallback = jsDelivrFallback(cleanUrl);
-        if (fallback) {
-            try {
-                await loadScript(fallback, label + ' (jsDelivr)');
-                sendToast('Carregado via jsDelivr', 2500, 'top');
-                return;
-            } catch (e) {
-                sendToast("Erro ao carregar via jsDelivr: " + label, 5000, 'top');
-            }
-        } else {
-            sendToast("Falha ao carregar: " + label, 5000, 'top');
-        }
-    }
+        });
 }
 
-// Carrega CSS: preferir tag <link>, com timeout e fallback
 async function loadCss(url) {
-    const cleanUrl = url.trim();
-    return new Promise(async (resolve) => {
-        try {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.type = 'text/css';
-            let done = false;
-            const timeoutId = setTimeout(async () => {
-                if (done) return;
-                done = true;
-                link.remove();
-                // fallback para fetch+injetar style
-                try {
-                    const resp = await resilientFetch(cleanUrl, { timeoutMs: window.featureConfigs.fetchTimeoutMs });
-                    const css = await resp.text();
-                    const style = document.createElement('style');
-                    style.innerHTML = css;
-                    document.head.appendChild(style);
-                    resolve();
-                } catch (e) {
-                    resolve(); // não travar a execução
-                }
-            }, (window.featureConfigs.fetchTimeoutMs || 10000) + 2000);
-
-            link.onload = () => { if (done) return; done = true; clearTimeout(timeoutId); resolve(); };
-            link.onerror = async () => {
-                if (done) return;
-                done = true;
-                clearTimeout(timeoutId);
-                link.remove();
-                // fallback para fetch+injetar style
-                try {
-                    const resp = await resilientFetch(cleanUrl, { timeoutMs: window.featureConfigs.fetchTimeoutMs });
-                    const css = await resp.text();
-                    const style = document.createElement('style');
-                    style.innerHTML = css;
-                    document.head.appendChild(style);
-                } catch (e) { /* ignore */ }
-                resolve();
-            };
-            link.href = cleanUrl;
-            document.head.appendChild(link);
-        } catch (e) {
-            // fallback direto
-            try {
-                const resp = await resilientFetch(cleanUrl, { timeoutMs: window.featureConfigs.fetchTimeoutMs });
-                const css = await resp.text();
-                const style = document.createElement('style');
-                style.innerHTML = css;
-                document.head.appendChild(style);
-            } catch (e2) {}
-            resolve();
-        }
+    return new Promise((resolve) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = url.trim();
+        link.onload = () => resolve();
+        document.head.appendChild(link);
     });
 }
 
@@ -467,4 +214,103 @@ function setupMain() {
     loadScript(repoPathDefault + 'functions/minuteFarm.js', 'minuteFarm');
     loadScript(repoPathDefault + 'functions/spoofUser.js', 'spoofUser');
     loadScript(repoPathDefault + 'functions/answerRevealer.js', 'answerRevealer');
-    loadScript(repoPathDefault + 'functions/rgbLogo.js'
+    loadScript(repoPathDefault + 'functions/rgbLogo.js', 'rgbLogo');
+    loadScript(repoPathDefault + 'functions/customBanner.js', 'customBanner');
+    loadScript(repoPathDefault + 'functions/autoAnswer.js', 'autoAnswer');
+}
+
+(async function(){
+    if (!/^https?:\/\/([a-z0-9-]+\.)?khanacademy\.org/.test(window.location.href)) {
+        alert("KhanScript só pode ser executado na Khan Academy: https://pt.khanacademy.org/");
+        window.location.href = "https://pt.khanacademy.org/";
+        return;
+    }
+
+    await showSplashScreen();
+
+    // Carrega dependências
+    await loadScript('https://cdn.jsdelivr.net/npm/darkreader@4.9.92/darkreader.min.js', 'darkReaderPlugin');
+    if (window.DarkReader) {
+        DarkReader.setFetchMethod(window.fetch);
+        DarkReader.enable({
+            brightness: 105,
+            contrast: 109,
+            darkSchemeBackgroundColor: '#140c28',
+            darkSchemeTextColor: '#e6ccff'
+        });
+    }
+
+    await loadCss('https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css');
+    await loadScript('https://cdn.jsdelivr.net/npm/toastify-js', 'toastifyPlugin');
+    await loadScript('https://raw.githubusercontent.com/adryd325/oneko.js/main/oneko.js', 'onekoJs');
+
+    setTimeout(()=>{
+        const onekoEl = document.getElementById('oneko');
+        if(onekoEl){
+            onekoEl.style.backgroundImage = `url('${logoUrl}')`;
+            onekoEl.style.display = "none";
+        }
+    },1000);
+
+    // Busca perfil
+    fetch("https://pt.khanacademy.org/api/internal/graphql/getFullUserProfile", {
+        referrer: "https://pt.khanacademy.org/profile/me",
+        body: '{"operationName":"getFullUserProfile","query":"query getFullUserProfile($kaid: String, $username: String) {\\n  user(kaid: $kaid, username: $username) {\\n    id\\n    nickname\\n    username\\n  }\\n}"}',
+        method: "POST",
+        mode: "cors",
+        credentials: "include"
+    }).then(async response => {
+        let data = await response.json();
+        if(data?.data?.user){
+            user = {
+                nickname: data.data.user.nickname,
+                username: data.data.user.username,
+                UID: data.data.user.id.slice(-5)
+            };
+        }
+    });
+
+    sendToast("KhanScript injetado com sucesso!");
+    playAudio('https://r2.e-z.host/4d0a0bea-60f8-44d6-9e74-3032a64a9f32/gcelzszy.wav');
+    await delay(500);
+    sendToast(`Bem-vindo(a) de volta: ${user.nickname}`);
+    if (device.apple) {
+        await delay(500);
+        sendToast(`Que tal experimentar um Android?`);
+    }
+
+    loadedPlugins.forEach(plugin => sendToast(`${plugin} carregado!`, 2000, 'top'));
+
+    hideSplashScreen();
+    setupMenu();
+    setupMain();
+
+    console.clear();
+    console.log("%cKhanScript %cby Nickz", "color:#d9b3ff;font-weight:bold;", "color:#9a7ed9;");
+
+    // Widget do Discord (só em desktop)
+    if (!device.mobile) {
+        const script = Object.assign(document.createElement('script'), {
+            src: 'https://cdn.jsdelivr.net/npm/@widgetbot/crate@3',
+            async: true,
+            onload: () => {
+                const discEmbed = new Crate({
+                    server: '1298477766290837554',
+                    channel: '1310975104460656662',
+                    location: ['bottom', 'right'],
+                    notifications: true,
+                    indicator: true,
+                    allChannelNotifications: true,
+                    defer: false,
+                    color: '#9a7ed9'
+                });
+                plppdo.on('domChanged', () =>
+                    window.location.href.includes("khanacademy.org/profile")
+                        ? discEmbed.show()
+                        : discEmbed.hide()
+                );
+            }
+        });
+        document.body.appendChild(script);
+    }
+})();
