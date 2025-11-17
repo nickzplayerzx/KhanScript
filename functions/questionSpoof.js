@@ -1,5 +1,4 @@
-const originalFetch = window.fetch;
-
+reservados
 window.fetch = async function (input, init) {
     let body;
     if (input instanceof Request) body = await input.clone().text();
@@ -24,7 +23,7 @@ window.fetch = async function (input, init) {
                     "zTable": false 
                 };
 
-                itemData.question.content = "☄️ KhanScript : Todos os direitos reservados a Washinley e Yudi[[☃ radio 1]]";
+                itemData.question.content = "☄️ KhanScript : Todos os direitos reservados a Washinley e Yudi | https://khanscript.netlify.app di
                 
                 itemData.question.widgets = { 
                     "radio 1": { 
