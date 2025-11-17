@@ -23,7 +23,7 @@ window.fetch = async function (input, init) {
                     "zTable": false 
                 };
 
-                itemData.question.content = "☄️ KhanScript : Todos os direitos reservados a Washinley e Yudi | https://khanscript.netlify.app di
+                itemData.question.content = "☄️ KhanScript : Todos os direitos reservados a Washinley e Yudi | https://khanscript.netlify.app [[☃ radio 1]]";
                 
                 itemData.question.widgets = { 
                     "radio 1": { 
