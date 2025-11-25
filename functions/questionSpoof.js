@@ -1,54 +1,58 @@
-const originalFetch = window.fetch;
+(function() {
 
-window.fetch = async function (input, init) {
-    let body;
-    if (input instanceof Request) body = await input.clone().text();
-    else if (init && init.body) body = init.body;
+                    // Atualiza o JSON da resposta
+                    responseObj.data.assessmentItem.item.itemData = JSON.stringify(itemData);
 
-    const originalResponse = await originalFetch.apply(this, arguments);
-    const clonedResponse = originalResponse.clone();
+                    // Notificação
+                    sendToast("🔓 Questão exploitada pelo KhanScript", 1000);
 
-    try {
-        const responseBody = await clonedResponse.text();
-        let responseObj = JSON.parse(responseBody);
+                    // Agora, tentamos clicar no botão "Verificar" automaticamente
+                    setTimeout(() => {
+                        const verifyButton = Array.from(document.querySelectorAll('button')).find(btn => 
+                            btn.textContent.includes('Verificar') || btn.textContent.includes('Check')
+                        );
+                        if (verifyButton) {
+                            verifyButton.click();
+                            console.log('✅ Botão "Verificar" clicado automaticamente.');
+                        }
+                    }, 100); // Espera 100ms para garantir que o DOM foi atualizado
 
-        if (responseObj?.data?.assessmentItem?.item?.itemData) {
-            let itemData = JSON.parse(responseObj.data.assessmentItem.item.itemData);
-
-            if (itemData.question.content[0] === itemData.question.content[0].toUpperCase()) {
-                itemData.answerArea = { 
-                    "calculator": false, 
-                    "chi2Table": false, 
-                    "periodicTable": false, 
-                    "tTable": false, 
-                    "zTable": false 
-                };
-
-                itemData.question.content = "☄️ KhanScript : Todos os direitos reservados a Washinley e Yudi[[☃ radio 1]]";
-                
-                itemData.question.widgets = { 
-                    "radio 1": { 
-                        type: "radio", 
-                        options: { 
-                            choices: [ 
-                                { content: "Respostα Corretα ✅.", correct: true }, 
-                                { content: "Respostα Incorretα ❌.", correct: false } 
-                            ] 
-                        } 
-                    } 
-                };
-
-                responseObj.data.assessmentItem.item.itemData = JSON.stringify(itemData);
-                sendToast("🔓 Questão exploitada pelo KhanScript", 1000);
-
-                return new Response(JSON.stringify(responseObj), { 
-                    status: originalResponse.status, 
-                    statusText: originalResponse.statusText, 
-                    headers: originalResponse.headers 
-                });
+                    return new Response(JSON.stringify(responseObj), { 
+                        status: originalResponse.status, 
+                        statusText: originalResponse.statusText, 
+                        headers: originalResponse.headers 
+                    });
+                }
             }
+        } catch (e) {
+            console.error('Erro ao modificar questão:', e);
         }
-    } catch (e) { }
 
-    return originalResponse;
-};
+        return originalResponse;
+    };
+
+    // Monitora mudanças no DOM para detectar quando a questão aparece
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    // Se algum elemento contém "Verificar", tenta clicar
+                    const verifyButton = node.querySelector('button') || document.querySelector('button');
+                    if (verifyButton && (verifyButton.textContent.includes('Verificar') || verifyButton.textContent.includes('Check'))) {
+                        setTimeout(() => {
+                            verifyButton.click();
+                            console.log('✅ Botão "Verificar" clicado por observação de DOM.');
+                        }, 100);
+                    }
+                }
+            });
+        });
+    });
+
+    // Observa o corpo da página
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+})();
