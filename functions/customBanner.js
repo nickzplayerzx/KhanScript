@@ -4,7 +4,7 @@ const phrases = [
     "KhanScript mandou um salve!",
     "Queria tanto ter o KhanScript.",
     "Ganhe tempo, use KhanScript!",
-    "KhanTool tá voando!"
+    "KhanScript tá voando!"
 ];
 
 setInterval(() => { 
