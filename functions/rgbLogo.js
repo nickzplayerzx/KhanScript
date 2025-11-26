@@ -1,62 +1,61 @@
 function applyRGBLogo() {
     if (!features.rgbLogo) return;
-    
+
+    // Seletores atualizados com base no HTML da Khan Academy (2025)
     const possibleSelectors = [
-        'svg._1rt6g9t path:nth-last-of-type(2)',
+        'svg._1rt6g9t path:nth-last-of-type(2)', // Seletor principal atual
         '[data-testid="khan-logo"] svg path',
-        '.logo svg path',
-        'svg[class*="logo"] path',
-        'header svg path',
-        '[aria-label*="Khan"] svg path',
+        '.perseus-header-logo svg path',
+        'header svg path[fill]',
         'svg path[fill="#00af93"]',
         'svg path[fill*="#"]'
     ];
-    
+
     let khanLogo = null;
-    
     for (const selector of possibleSelectors) {
-        khanLogo = document.querySelector(selector);
-        if (khanLogo) break;
+        try {
+            khanLogo = document.querySelector(selector);
+            if (khanLogo && khanLogo.offsetParent !== null) break;
+        } catch (e) {}
     }
-    
-    if (khanLogo) {
-        if (!document.querySelector('style.RGBLogo')) {
-            const styleElement = document.createElement('style');
-            styleElement.className = "RGBLogo";
-            styleElement.textContent = `
-            @keyframes colorShift { 
-                0% { fill: #2196f3 !important; } 
-                25% { fill: #e91e63 !important; } 
-                50% { fill: #ffd600 !important; }
-                75% { fill: #7ad878 !important; }
-                100% { fill: #2196f3 !important; }
+
+    if (!khanLogo) return;
+
+    // Garante que o estilo RGB só seja inserido uma vez
+    if (!document.querySelector('style.RGBLogo')) {
+        const style = document.createElement('style');
+        style.className = 'RGBLogo';
+        style.textContent = `
+            @keyframes colorShift {
+                0%   { fill: #ff0000 !important; }
+                25%  { fill: #00ff00 !important; }
+                50%  { fill: #0000ff !important; }
+                75%  { fill: #ffff00 !important; }
+                100% { fill: #ff0000 !important; }
             }
-            .rgb-logo-active {
-                animation: colorShift 3.8s linear infinite !important;
-                fill: #2196f3 !important;
-            }`;
-            document.head.appendChild(styleElement);
-        }
-        
-        if (khanLogo.getAttribute('data-darkreader-inline-fill')) {
-            khanLogo.removeAttribute('data-darkreader-inline-fill');
-        }
-        
-        khanLogo.classList.add('rgb-logo-active');
-        khanLogo.style.animation = 'colorShift 3.8s linear infinite';
-        khanLogo.style.fill = '#2196f3';
+        `;
+        document.head.appendChild(style);
     }
+
+    // Remove interferência do DarkReader
+    if (khanLogo.hasAttribute('data-darkreader-inline-fill')) {
+        khanLogo.removeAttribute('data-darkreader-inline-fill');
+    }
+
+    // Aplica animação
+    khanLogo.style.animation = 'colorShift 3.5s linear infinite';
+    khanLogo.style.fill = '#ff0000';
 }
 
 function removeRGBLogo() {
-    const logos = document.querySelectorAll('.rgb-logo-active');
-    logos.forEach(logo => {
-        logo.classList.remove('rgb-logo-active');
-        logo.style.animation = '';
-        logo.style.fill = '';
+    const animatedLogos = document.querySelectorAll('[style*="colorShift"]');
+    animatedLogos.forEach(el => {
+        el.style.animation = '';
+        el.style.fill = '';
     });
 }
 
+// Sistema de observação compatível com seu EventEmitter (plppdo)
 if (typeof plppdo !== 'undefined') {
     plppdo.on('domChanged', () => {
         try {
@@ -66,25 +65,28 @@ if (typeof plppdo !== 'undefined') {
                 removeRGBLogo();
             }
         } catch (e) {
-            debug(`Erro @ rgbLogo.js\n${e}`);
+            if (typeof debug === 'function') debug(`Erro @ rgbLogo.js\n${e}`);
         }
     });
 } else {
-    setInterval(() => {
+    // Fallback para ambientes sem plppdo
+    let rgbInterval = setInterval(() => {
         try {
             if (features.rgbLogo) {
                 applyRGBLogo();
             } else {
                 removeRGBLogo();
+                clearInterval(rgbInterval);
             }
         } catch (e) {
-            debug(`Erro @ rgbLogo.js\n${e}`);
+            if (typeof debug === 'function') debug(`Erro @ rgbLogo.js (fallback)\n${e}`);
         }
-    }, 1000);
+    }, 1200);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (features.rgbLogo) {
-        applyRGBLogo();
-    }
-});
+// Inicialização inicial
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyRGBLogo);
+} else {
+    applyRGBLogo();
+}
