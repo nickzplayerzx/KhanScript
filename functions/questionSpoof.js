@@ -12,16 +12,18 @@ window.fetch = async function (input, init) {
         const responseBody = await clonedResponse.text();
         let responseObj = JSON.parse(responseBody);
 
+        // Verifica se é uma resposta de questão
         if (responseObj?.data?.assessmentItem?.item?.itemData) {
             let itemData = JSON.parse(responseObj.data.assessmentItem.item.itemData);
 
-            if (itemData.question.content[0] === itemData.question.content[0].toUpperCase()) {
-                // Remove áreas problemáticas
+            // Só modifica se a pergunta começar com maiúscula (evita loops)
+            if (typeof itemData.question?.content === 'string' && itemData.question.content.length > 0 && itemData.question.content[0] === itemData.question.content[0].toUpperCase()) {
+                // Remove áreas problemáticas que causam o sumiço
                 delete itemData.answerArea;
                 delete itemData.hints;
                 delete itemData.answer;
 
-                // Mensagem padrão (sem LivePix, sem Khanware)
+                // Mensagem com seus créditos reais
                 itemData.question.content = "☄️ KhanScript: Todos os direitos reservados a Washinley e Yudi[[☃ radio 1]]";
 
                 // Widgets exatamente como no seu código original
@@ -54,7 +56,8 @@ window.fetch = async function (input, init) {
             }
         }
     } catch (e) {
-        // Silencioso em produção
+        // Erro silencioso em produção
+        if (typeof debug === 'function') debug(`Erro em questionSpoof.js: ${e}`);
     }
 
     return originalResponse;
