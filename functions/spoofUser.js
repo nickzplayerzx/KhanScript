@@ -16,6 +16,8 @@ plppdo.on('domChanged', () => {
             }
         }
     } catch (e) {
-        debug(`Erro @ spoofUser.js\n${e}`);
+        if (typeof debug === 'function') {
+            debug(`Erro @ spoofUser.js\n${e.message}`);
+        }
     }
 });
