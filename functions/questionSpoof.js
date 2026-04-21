@@ -1,3 +1,15 @@
+// ==UserScript==
+// @name        KhanScript
+// @namespace   nickzplayerzx
+// @match       *://*.khanacademy.org/*
+// @grant       none
+// @version     3.1
+// @author      Nickz (Yudi Matheus), Kovez (Washinley Samuel), Unleasher (Victor Souza)
+// @icon        https://raw.githubusercontent.com/nickzplayerzx/KhanScript/main/logo.png
+// @description KhanScript — O melhor script para Khan Academy (Atualizado 2026)
+// @run-at      document-start
+// ==/UserScript==
+
 (function() {
     'use strict';
 
@@ -6,7 +18,7 @@
         spoofPhrases: [
             "☄️ KhanScript: Todos os direitos reservados a Washinley e Yudi.",
             "🤖 KhanScript: Seu melhor cheat para Khan Academy.",
-            "⚡ KhanScript: Feito com ❤️ por Nickz."
+            "🔮 KhanScript: Feito por Nickz!"
         ],
         fetchTimeout: 10000,
         autoClickDelay: 1000
