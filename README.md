@@ -6,7 +6,7 @@
 javascript:fetch("https://raw.githubusercontent.com/nickzplayerzx/KhanScript/refs/heads/main/KhanScript.js").then(t=>t.text()).then(eval);
 ```
 
-Copyright (C) 2025 KhanScript
+Copyright (C) 2026 KhanScript
 
 Créditos pelo script ao Kovez/zStuartbw e Nickz
 
